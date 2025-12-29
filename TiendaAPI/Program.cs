@@ -13,67 +13,61 @@ var builder = WebApplication.CreateBuilder(args);
 var key = builder.Configuration["Jwt:Key"];
 var keyBytes = Encoding.UTF8.GetBytes(key);
 
-//Configurar autenticacion JWT Bearer
+// 1. Configurar autenticación JWT Bearer
 builder.Services.AddAuthentication(config =>
 {
     config.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     config.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-}).AddJwtBearer(confing =>
+}).AddJwtBearer(config =>
 {
-    confing.RequireHttpsMetadata = false;
-    confing.SaveToken = true;
-    confing.TokenValidationParameters = new TokenValidationParameters
+    config.RequireHttpsMetadata = false;
+    config.SaveToken = true;
+    config.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
-
         ValidateIssuer = false,
         ValidateAudience = false
     };
 });
 
-//Configuracion de BD
+// 2. Configuración de BD
 var connectionString = builder.Configuration.GetConnectionString("CadenaSQL");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString)
 );
 
-//Registro de servicios 
+// 3. Registro de servicios 
 builder.Services.AddScoped<IProductoService, ProductoService>();
 
-//Mapper
-//Configuracion Manual de mapper
+// 4. Mapper (Configuración Manual)
 var mapperConfig = new MapperConfiguration(mc =>
 {
     mc.AddProfile(new AutoMapperProfile());
 });
-//Objeto mapper
 IMapper mapper = mapperConfig.CreateMapper();
-//Registro del mapper en el contenedor de servicios
 builder.Services.AddSingleton(mapper);
 
-// Add services to the container.
-
+// 5. Agregar servicios al contenedor
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
-//Configuracion Swagger para usar JWT
+// 6. Configuración Swagger para usar JWT
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "TiendaAPI", Version = "v1" });
 
-    //Definimos la seguridad 
+    // Definimos la seguridad 
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWt Authorization header using the Bearer scheme.",
+        Description = "JWT Authorization header using the Bearer scheme.",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.Http,
         Scheme = "Bearer"
     });
 
-    //Aplicamos seguridad globalmente
+    // Aplicamos seguridad globalmente
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -88,18 +82,16 @@ builder.Services.AddSwaggerGen(c =>
             new string[] {}
         }
     });
-
 });
-
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+
+app.UseSwagger();
+app.UseSwaggerUI();
+
+
+app.MapGet("/", () => "¡Bienvenido a TiendaAPI! La aplicación está en línea. Ve a /swagger para ver la documentación.");
 
 app.UseHttpsRedirection();
 
