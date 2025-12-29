@@ -13,7 +13,18 @@ var builder = WebApplication.CreateBuilder(args);
 var key = builder.Configuration["Jwt:Key"];
 var keyBytes = Encoding.UTF8.GetBytes(key);
 
-// 1. Configurar autenticación JWT Bearer
+//Habilitar CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("PermitirTodo", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
+// Configurar autenticación JWT Bearer
 builder.Services.AddAuthentication(config =>
 {
     config.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -31,16 +42,16 @@ builder.Services.AddAuthentication(config =>
     };
 });
 
-// 2. Configuración de BD
+// Configuración de BD
 var connectionString = builder.Configuration.GetConnectionString("CadenaSQL");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString)
 );
 
-// 3. Registro de servicios 
+// Registro de servicios 
 builder.Services.AddScoped<IProductoService, ProductoService>();
 
-// 4. Mapper (Configuración Manual)
+// Mapper (Configuración Manual)
 var mapperConfig = new MapperConfiguration(mc =>
 {
     mc.AddProfile(new AutoMapperProfile());
@@ -48,11 +59,11 @@ var mapperConfig = new MapperConfiguration(mc =>
 IMapper mapper = mapperConfig.CreateMapper();
 builder.Services.AddSingleton(mapper);
 
-// 5. Agregar servicios al contenedor
+// Agregar servicios al contenedor
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// 6. Configuración Swagger para usar JWT
+// Configuración Swagger para usar JWT
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "TiendaAPI", Version = "v1" });
@@ -84,8 +95,12 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+
+
 var app = builder.Build();
 
+//Usar la politica de CORS
+app.UseCors("PermitirTodo");
 
 app.UseSwagger();
 app.UseSwaggerUI();
